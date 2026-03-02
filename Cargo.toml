@@ -1,0 +1,18 @@
+[package]
+name = "nas"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.7.9", features = ["multipart"] } # Add the feature here!
+axum-extra = { version = "0.9.6", features = ["cookie"] }
+tokio = { version = "1.40", features = ["full"] }
+tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4"
+sysinfo = "0.30"
+tokio-util = { version = "0.7", features = ["io"] }
+mime_guess = "2.0.5"
