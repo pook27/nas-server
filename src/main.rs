@@ -51,7 +51,7 @@ async fn download_file(
     State(state): State<SharedState>,
     jar: CookieJar,
     Path(filename): Path<String>,
-    ) -> impl IntoResponse {
+) -> impl IntoResponse {
     // ... (keep your permission checks) ...
 
     let path = std::path::Path::new(STORAGE_PATH).join(&filename);
@@ -138,7 +138,7 @@ async fn login_page() -> Html<&'static str> {
             </body>
         </html>
         "#
-        )
+    )
 }
 
 #[derive(Deserialize)]
@@ -153,7 +153,7 @@ async fn login_post(
     State(state): State<SharedState>,
     jar: CookieJar,
     Form(payload): Form<LoginPayload>,
-    ) -> impl IntoResponse {
+) -> impl IntoResponse {
     let username = payload.username.trim().to_string();
     let password = payload.password.unwrap_or_default();
 
@@ -228,20 +228,32 @@ async fn list_files_html(State(state): State<SharedState>, jar: CookieJar) -> im
 
             let visibility_icon = if is_public { "🌐 Public" } else { "🔒 Private" };
             let can_edit = owner == current_user || current_user == "admin" || owner == "anonymous";
+
+            // 3. Lock down Visibility Toggle
+            let visibility_icon = if is_public { "🌐 Public" } else { "🔒 Private" };
             let visibility_cell = if can_edit {
                 format!("<a href='/toggle_visibility/{}' style='text-decoration:none;'>{}</a>", name, visibility_icon)
             } else {
-                visibility_icon.to_string() // Non-owners just see the text, no link
+                visibility_icon.to_string() // Non-owners just see text, NO link
             };
+
+            // 4. Lock down Delete Button
+            let delete_btn = if can_edit {
+                format!("<a href='/delete/{}' class='btn-delete'>[Delete]</a>", name)
+            } else {
+                "<span style='color: gray;'>[Locked]</span>".to_string() // Show it's locked to others
+            };
+
+            // 5. Render the Row
             rows.push_str(&format!(
                     "<tr>
                     <td><a href='/download/{name}'>{name}</a></td>
                     <td>{owner}</td>
                     <td data-size='{raw_bytes}'>{size_str}</td> 
-<td>{visibility_cell}</td>              
-      <td> <a href='/delete/{name}' class='btn-delete'>[Delete]</a></td>
+                    <td>{visibility_cell}</td>              
+                    <td>{preview_btn}{delete_btn}</td>
                 </tr>"
-                ));
+            ));        
         }
     }
 
@@ -266,7 +278,7 @@ async fn upload_file(
     State(state): State<SharedState>,
     jar: CookieJar,
     mut multipart: Multipart,
-    ) -> Result<Redirect, StatusCode> {
+) -> Result<Redirect, StatusCode> {
     let current_user = get_current_user(&jar).unwrap_or_else(|| "anonymous".to_string());
 
     let mut final_file_name = String::new();
@@ -315,7 +327,7 @@ async fn delete_file(
     State(state): State<SharedState>,
     jar: CookieJar,
     Path(filename): Path<String>,
-    ) -> Result<Redirect, StatusCode> {
+) -> Result<Redirect, StatusCode> {
     let current_user = get_current_user(&jar).unwrap_or_else(|| "anonymous".to_string());
 
     if filename.contains("..") || filename.contains('/') {
@@ -347,7 +359,7 @@ async fn toggle_visibility(
     State(state): State<SharedState>,
     jar: CookieJar,
     Path(filename): Path<String>,
-    ) -> Result<Redirect, StatusCode> {
+) -> Result<Redirect, StatusCode> {
     let current_user = get_current_user(&jar).unwrap_or_else(|| "anonymous".to_string());
 
     if filename.contains("..") || filename.contains('/') {
