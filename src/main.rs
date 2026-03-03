@@ -99,7 +99,7 @@ async fn main() {
         .layer(DefaultBodyLimit::max(1024 * 1024 * 1024))
         .with_state(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 80));
     println!("NAS Server running at http://10.100.128.60:3000");
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -251,7 +251,7 @@ async fn list_files_html(State(state): State<SharedState>, jar: CookieJar) -> im
                     <td>{owner}</td>
                     <td data-size='{raw_bytes}'>{size_str}</td> 
                     <td>{visibility_cell}</td>              
-                    <td>{preview_btn}{delete_btn}</td>
+                    <td>{delete_btn}</td>
                 </tr>"
             ));        
         }
