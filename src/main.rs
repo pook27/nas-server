@@ -42,29 +42,32 @@ fn format_size(bytes: u64) -> String {
     else { format!("{:.2} KB", kb) }
 }
 
-use mime_guess; // cargo add mime_guess
-                //
+use axum::extract::Request;
+use tower::ServiceExt;
+use tower_http::services::ServeFile;
+
 async fn download_file(
     State(state): State<SharedState>,
     jar: CookieJar,
     Path(filename): Path<String>,
+    req: Request,
 ) -> impl IntoResponse {
-    // ... (keep your permission checks) ...
     let path = std::path::Path::new(STORAGE_PATH).join(&filename);
-    let file = match tokio::fs::File::open(&path).await {
-        Ok(f) => f,
-        Err(_) => return StatusCode::NOT_FOUND.into_response(),
-    };
-    // Automatically detect if it's a video, image, or text
-    let content_type = mime_guess::from_path(&path).first_or_octet_stream();
-    let stream = tokio_util::io::ReaderStream::new(file);
-    let body = Body::from_stream(stream);
-    Response::builder()
-        .header("Content-Type", content_type.to_string())
-        .header("Content-Disposition", format!("inline; filename=\"{}\"", filename))
-        .body(body)
-        .unwrap()
-        .into_response()
+    if !path.exists() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    
+    match ServeFile::new(&path).oneshot(req).await {
+        Ok(mut response) => {
+            // We just inject Content-Disposition so the browser knows the filename
+            response.headers_mut().insert(
+                axum::http::header::CONTENT_DISPOSITION,
+                format!("inline; filename=\"{}\"", filename).parse().unwrap(),
+            );
+            response.into_response()
+        },
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
 #[tokio::main]
@@ -87,7 +90,6 @@ async fn main() {
         .route("/download/:filename", get(download_file))
         .route("/toggle_visibility/:filename", get(toggle_visibility))
         .nest_service("/assets", ServeDir::new("/srv/nas_storage/assets"))
-        .nest_service("/files", ServeDir::new(STORAGE_PATH))
         .layer(DefaultBodyLimit::max(1024 * 1024 * 1024))
         .with_state(state);
     let addr = SocketAddr::from(([0, 0, 0, 0], 80));
