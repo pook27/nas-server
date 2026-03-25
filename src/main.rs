@@ -62,7 +62,7 @@ async fn download_file(
             // We just inject Content-Disposition so the browser knows the filename
             response.headers_mut().insert(
                 axum::http::header::CONTENT_DISPOSITION,
-                format!("inline; filename=\"{}\"", filename).parse().unwrap(),
+                format!("inline; filename=\"{}\"", filename).parse::<axum::http::HeaderValue>().unwrap(),
             );
             response.into_response()
         },
